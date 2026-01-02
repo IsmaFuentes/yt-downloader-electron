@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { ConfigProvider, theme, Card, Flex, Input, Button, Layout, Tag, Spin } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { YoutubeVideoInfo } from '../../shared';
+import { ConfigProvider, theme, message, Card, Flex, Input, Button, Layout, Tag, Spin } from 'antd';
 import {
   PlusOutlined,
   DownloadOutlined,
@@ -7,23 +8,23 @@ import {
   DeleteOutlined,
   YoutubeOutlined,
 } from '@ant-design/icons';
-import { YoutubeVideoInfo } from '../../shared';
 
 const { DialogService, YTDownloadService } = window.ElectronAPI;
 
-const MainPage = () => {
+const MainPage = (): React.ReactElement => {
+  const [messageApi, contextHolder] = message.useMessage();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [directory, setDirectory] = useState(localStorage.getItem('download-path'));
-  const [videos, setVideos] = useState(new Array<YoutubeVideoInfo>());
+  const [videos, setVideos] = useState<YoutubeVideoInfo[]>([]);
 
   useEffect(() => {
-    console.log('checking for updates..');
     YTDownloadService.CheckUpdates()
-      .then(() => console.log('finished checking for updates.'))
-      .catch((error) => {
+      .then(() => messageApi.success('Yt-dlp is up to date!'))
+      .catch((error: unknown) => {
         if (error) {
-          console.log(`An error occurred while checking for updates: ${error}`);
+          messageApi.error('An error occurred while checking for updates');
+          console.log(`[error]: ${error}`);
         }
       });
   }, []);
@@ -42,7 +43,7 @@ const MainPage = () => {
   };
 
   const fetchInfoFromYtVideo = async (): Promise<void> => {
-    if (!url) return;
+    if (!url || url.trim() === '') return;
     try {
       setIsLoading(true);
       const videoUrl = url
@@ -53,9 +54,8 @@ const MainPage = () => {
       const info = await YTDownloadService.FetchInfo(videoUrl);
       setVideos((prev) => [...prev, info]);
       setUrl('');
-    } catch (err) {
-      // TODO: toast
-      alert(err);
+    } catch (err: unknown) {
+      if (err instanceof Error) messageApi.error(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -63,20 +63,19 @@ const MainPage = () => {
 
   const downloadQueue = async (): Promise<void> => {
     if (!directory) {
-      // TODO: toast
-      alert('Download folder is not configured!');
+      messageApi.warning('Download folder is not configured!');
       return;
     }
 
     try {
       setIsLoading(true);
-      for (const info of [...videos]) {
+      const videosToDownload = [...videos];
+      for (const info of videosToDownload) {
         await YTDownloadService.DownloadAudio(info.videoUrl, `${directory}\\${info.title}.mp3`);
         setVideos((prev) => prev.filter((video) => video.videoUrl !== info.videoUrl));
       }
-    } catch (err) {
-      // TODO: toast
-      alert(err);
+    } catch (err: unknown) {
+      if (err instanceof Error) messageApi.error(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +83,7 @@ const MainPage = () => {
 
   return (
     <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
+      {contextHolder}
       <div style={{ height: '100%', width: '100%' }}>
         <Layout style={{ padding: 10, height: '100%' }}>
           <Card style={{ width: '100%', marginBottom: 10 }}>
@@ -93,7 +93,12 @@ const MainPage = () => {
               style={{ marginBottom: 5, fontSize: 18 }}
             />
             <Flex>
-              <Input type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
+              <Input
+                type="text"
+                placeholder="YouTube url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
               <Button style={{ marginLeft: 5 }} onClick={async () => await fetchInfoFromYtVideo()}>
                 <PlusOutlined />
               </Button>
@@ -111,17 +116,17 @@ const MainPage = () => {
             >
               <Spin size="large" />
             </Flex>
-            {videos.map((e) => {
+            {videos.map(({ ownerChannelName, title, category, videoUrl }) => {
               return (
-                <Card key={e.videoUrl} style={{ margin: 5 }}>
+                <Card key={videoUrl} style={{ margin: 5 }}>
                   <Flex vertical>
                     <label>
-                      {e.ownerChannelName} | {e.title}
+                      {ownerChannelName} | {title}
                     </label>
 
                     <Flex align="center" justify="space-between">
-                      <Tag style={{ height: 26 }}>{e.category}</Tag>
-                      <Button onClick={() => deleteItem(e.title)} style={{ borderRadius: 45 }}>
+                      <Tag style={{ height: 26 }}>{category}</Tag>
+                      <Button onClick={() => deleteItem(title)} style={{ borderRadius: 45 }}>
                         <DeleteOutlined />
                       </Button>
                     </Flex>
