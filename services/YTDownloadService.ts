@@ -37,6 +37,10 @@ class YTDowloadService implements IYTDownloadService {
     await writeFile(fileName, Readable.fromWeb(response.body as ReadableStream<any>));
   };
 
+  /**
+   * Checks the official yt-dlp repository and downloads the latest release if needed.
+   * @returns {Promise<void>}
+   */
   CheckUpdates = async (): Promise<void> => {
     console.log('[info]: checking for updates...');
 
@@ -66,6 +70,11 @@ class YTDowloadService implements IYTDownloadService {
     console.log('[info]: yt-dlp updated');
   };
 
+  /**
+   * Fetches YouTube video information
+   * @param url YouTube video url (eg: https://www.youtube.com/watch?v=bsV9euj98ZU)
+   * @returns {Promise<YoutubeVideoInfo>}
+   */
   FetchInfo = async (url: string): Promise<YoutubeVideoInfo> => {
     console.log(`[info]: fetching ${url}`);
     const execPath = path.join(this.#getRootDirectory(), 'yt-dlp.exe');
@@ -89,6 +98,12 @@ class YTDowloadService implements IYTDownloadService {
     });
   };
 
+  /**
+   * Downloads a YouTube video as audio with the best quality
+   * @param url YouTube video url
+   * @param fileName Local file
+   * @returns {Promise<void>}
+   */
   DownloadAudio = async (url: string, fileName: string): Promise<void> => {
     const execPath = path.join(this.#getRootDirectory(), 'yt-dlp.exe');
     console.log(`[info]: downloading ${url}`);

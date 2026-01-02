@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ConfigProvider, theme, Card, Flex, Input, Button, Layout, Tag, Spin } from 'antd';
 import {
   PlusOutlined,
@@ -12,6 +12,7 @@ import { YoutubeVideoInfo } from '../../shared';
 const { DialogService, YTDownloadService } = window.ElectronAPI;
 
 const MainPage = () => {
+  const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [directory, setDirectory] = useState(localStorage.getItem('download-path'));
   const [videos, setVideos] = useState(new Array<YoutubeVideoInfo>());
@@ -41,24 +42,22 @@ const MainPage = () => {
   };
 
   const fetchInfoFromYtVideo = async (): Promise<void> => {
-    const selector = document.querySelector('#url-selector') as HTMLInputElement;
-    if (selector.value) {
-      try {
-        setIsLoading(true);
-        const url = selector.value
-          .trim()
-          .replace(/([?&])[^v][^&]*&?/g, '')
-          .replace(/&$/, '');
+    if (!url) return;
+    try {
+      setIsLoading(true);
+      const videoUrl = url
+        .trim()
+        .replace(/([?&])[^v][^&]*&?/g, '')
+        .replace(/&$/, '');
 
-        const info = await YTDownloadService.FetchInfo(url);
-        setVideos([...videos, info]);
-      } catch (err) {
-        // TODO: toast
-        alert(err);
-      } finally {
-        selector.value = '';
-        setIsLoading(false);
-      }
+      const info = await YTDownloadService.FetchInfo(videoUrl);
+      setVideos((prev) => [...prev, info]);
+      setUrl('');
+    } catch (err) {
+      // TODO: toast
+      alert(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -71,11 +70,9 @@ const MainPage = () => {
 
     try {
       setIsLoading(true);
-      for (let i = 0; i < videos.length; i++) {
-        const info = videos[i];
+      for (const info of [...videos]) {
         await YTDownloadService.DownloadAudio(info.videoUrl, `${directory}\\${info.title}.mp3`);
-        videos.splice(videos.indexOf(info), 1);
-        setVideos([...videos]);
+        setVideos((prev) => prev.filter((video) => video.videoUrl !== info.videoUrl));
       }
     } catch (err) {
       // TODO: toast
@@ -96,8 +93,8 @@ const MainPage = () => {
               style={{ marginBottom: 5, fontSize: 18 }}
             />
             <Flex>
-              <Input type="text" id="url-selector" />
-              <Button style={{ marginLeft: 5 }} onClick={() => fetchInfoFromYtVideo()}>
+              <Input type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
+              <Button style={{ marginLeft: 5 }} onClick={async () => await fetchInfoFromYtVideo()}>
                 <PlusOutlined />
               </Button>
             </Flex>
@@ -114,9 +111,9 @@ const MainPage = () => {
             >
               <Spin size="large" />
             </Flex>
-            {videos.map((e, i) => {
+            {videos.map((e) => {
               return (
-                <Card key={i} style={{ margin: 5 }}>
+                <Card key={e.videoUrl} style={{ margin: 5 }}>
                   <Flex vertical>
                     <label>
                       {e.ownerChannelName} | {e.title}
@@ -135,7 +132,11 @@ const MainPage = () => {
           </Card>
 
           <Flex style={{ marginTop: 10, marginBottom: 10 }}>
-            <Button style={{ width: 125 }} onClick={async () => await downloadQueue()}>
+            <Button
+              style={{ width: 125 }}
+              disabled={isLoading || videos.length === 0}
+              onClick={async () => await downloadQueue()}
+            >
               Download
               <DownloadOutlined />
             </Button>
