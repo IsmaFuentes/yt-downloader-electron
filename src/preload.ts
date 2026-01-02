@@ -1,6 +1,4 @@
-// import { contextBridge, ipcRenderer } from 'electron';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { contextBridge, ipcRenderer } = require('electron');
+import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('ElectronAPI', {
   DialogService: {

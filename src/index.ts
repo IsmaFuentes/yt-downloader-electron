@@ -12,9 +12,6 @@ if (require('electron-squirrel-startup')) {
 }
 
 const createWindow = (): void => {
-  // services
-  const YtService = new YTDownloadService();
-
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     height: 600,
@@ -24,17 +21,16 @@ const createWindow = (): void => {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: true,
       contextIsolation: true,
-      devTools: true,
+      devTools: process.env.NODE_ENV ? true : false,
     },
   });
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  mainWindow.removeMenu();
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.removeMenu();
   }
 
   // ipc events
@@ -42,7 +38,8 @@ const createWindow = (): void => {
     return await dialog.showOpenDialog({ properties: ['openDirectory'], title });
   });
 
-  // service events
+  // services
+  const YtService = new YTDownloadService();
   ipcMain.handle('ytservice-checkupdates', async () => YtService.CheckUpdates());
   ipcMain.handle('ytservice-fetchinfo', async (event, url: string) => YtService.FetchInfo(url));
   ipcMain.handle('ytservice-downloadaudio', async (event, url: string, fileName: string) =>
