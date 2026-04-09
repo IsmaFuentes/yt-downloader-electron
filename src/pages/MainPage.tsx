@@ -120,8 +120,8 @@ const MainPage = (): React.ReactElement => {
               return (
                 <Card key={videoUrl} style={{ margin: 5 }}>
                   <Flex vertical>
-                    <label>
-                      {ownerChannelName} | {title}
+                    <label style={{ fontSize: 16, fontWeight: 'bold' }}>
+                      [{ownerChannelName}] {title}
                     </label>
 
                     <Flex align="center" justify="space-between">
