@@ -149,7 +149,7 @@ const MainPage = (): React.ReactElement => {
               type="text"
               readOnly
               style={{ cursor: 'default', margin: '0px 5px 0px 5px' }}
-              value={directory}
+              value={directory ?? 'No download folder selected'}
             />
             <Button onClick={() => setDownloadDirectory()}>
               <FolderOutlined />
